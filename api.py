@@ -1,8 +1,14 @@
 from flask import Flask, request
 from flask_restful import Resource, Api
-
+import concurrent.futures
 import os
 import requests
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
+
+GITHUB_APP_CLIENT_ID = os.getenv('GITHUB_APP_CLIENT_ID')
+GITHUB_APP_CLIENT_SECRET = os.getenv('GITHUB_APP_CLIENT_SECRET')
 
 PORT = int(os.environ.get('PORT', 5000))            # Retrieve port from environment variables or default to port 5000
 app = Flask(__name__)
@@ -10,18 +16,24 @@ app.config['DEBUG'] = True
 api = Api(app)
 
 
+# Function to retrieve JSON response from url argument
+# Returns JSON response unless non 200 status code retrieved or exception (in which case returns None)
+def get_json_response(url: str, params=None):
+    try:
+        response = requests.get(url, params=params)
+
+        # 200 status code only
+        if response.ok:
+            return response.json()
+        else:
+            return None
+    except Exception:
+        return None
+
+
 # https://docs.github.com/en/rest/reference/users#get-a-user
 def get_user_information(username: str):
-    response = requests.get(f'https://api.github.com/users/{username}')
-
-    # 200 status code only
-    if response.ok:
-        try:
-            return response.json()
-        except Exception:
-            return None
-    else:
-        return None
+    return get_json_response(f'https://api.github.com/users/{username}')
 
 
 # https://docs.github.com/en/rest/reference/repos#list-repositories-for-a-user
@@ -31,31 +43,26 @@ def get_user_repos(username: str, forked=True):
 
     # Loop to iterate through pages while there are more results
     while True:
-        response = requests.get(f'https://api.github.com/users/{username}/repos', params={
-            'per_page': 100,                    # Max results per page according to GitHub API
+        page_result = get_json_response(f'https://api.github.com/users/{username}/repos', params={
+            'per_page': 100,  # Max results per page according to GitHub API
             'page': page_number
         })
-        # 200 status code only
-        if response.ok:
-            try:
-                response_json = response.json()
-                # No more repos found on this page: break out of loop
-                if len(response_json) == 0:
-                    break
-                else:
-                    # Add all repos on this page since we don't care about fork status
-                    if forked:
-                        all_user_repos.extend(response_json)
-                    # Only add repos that are not forked
-                    else:
-                        for repo in response_json:
-                            if repo['fork'] is False:
-                                all_user_repos.append(repo)
-                    page_number += 1            # Increment page number to move to next page
-            except Exception:
-                return None
-        else:
+        if page_result is None:
             return None
+        else:
+            # No more repos found on this page: break out of loop
+            if len(page_result) == 0:
+                break
+            else:
+                # Add all repos on this page since we don't care about fork status
+                if forked:
+                    all_user_repos.extend(page_result)
+                # Only add repos that are not forked
+                else:
+                    for repo in page_result:
+                        if repo['fork'] is False:
+                            all_user_repos.append(repo)
+                page_number += 1  # Increment page number to move to next page
     return all_user_repos
 
 
@@ -68,25 +75,27 @@ def get_repo_stats(repos: list):
 
     all_repo_languages = {}
 
-    for repo in repos:
-        try:
-            total_count += 1
-            total_stargazers += repo['stargazers_count']
-            total_fork_count += repo['forks_count']
-            total_repo_size += repo['size']
-
-            languages_response = requests.get(repo['languages_url'])
-            if languages_response.ok:
-                languages_info = languages_response.json()
-                for language in languages_info:
-                    if language in all_repo_languages:
-                        all_repo_languages[language] += languages_info[language]
-                    else:
-                        all_repo_languages[language] = languages_info[language]
-            else:
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(get_json_response, repo['languages_url']) for repo in repos]
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                languages_info = future.result()
+                if languages_info is None:
+                    return None
+                else:
+                    for language in languages_info:
+                        if language in all_repo_languages:
+                            all_repo_languages[language] += languages_info[language]
+                        else:
+                            all_repo_languages[language] = languages_info[language]
+            except Exception:
                 return None
-        except Exception:
-            return None
+
+    for repo in repos:
+        total_count += 1
+        total_stargazers += repo['stargazers_count']
+        total_fork_count += repo['forks_count']
+        total_repo_size += repo['size']
 
     average_repo_size = total_repo_size / total_count       # Average repository size (in KB units)
     all_repo_languages = {k: v for k, v in sorted(all_repo_languages.items(), key=lambda item: item[1], reverse=True)}
@@ -104,27 +113,41 @@ def get_repo_stats(repos: list):
 class GhApi(Resource):
     def get(self):
         query_parameters = request.args
-        username_param = query_parameters.get('username')
+        username = query_parameters.get('username')
+        forked = query_parameters.get('forked')
 
-        forked_param = query_parameters.get('forked')
-        if forked_param and forked_param.strip().lower() == 'false':
-            forked_param = False
+        if forked and forked.strip().lower() == 'false':
+            forked = False
         else:
-            forked_param = True
+            forked = True
 
-        if username_param:
-            user_data = get_user_information(username_param)
-            user_repos = get_user_repos(username_param, forked_param)
-            repo_stats = get_repo_stats(user_repos)
-            return {
-                'username': username_param,
-                'viewing_forked_repos': forked_param,
-                'repo_stats': repo_stats,
-                'user_data': user_data,
-                'user_repos': user_repos
-            }
+        if username:
+            username = username.strip()
+
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                user_data_future = executor.submit(get_user_information, username)
+                user_repos_future = executor.submit(get_user_repos, username)
+                user_data = user_data_future.result()
+                user_repos = user_repos_future.result()
+
+            if user_data is None or user_repos is None:
+                return {
+                    'success': False,
+                    'error': 'GitHub API error.'
+                }
+            else:
+                repo_stats = get_repo_stats(user_repos)
+                return {
+                    'success': True,
+                    'username': username,
+                    'viewing_forked_repos': forked,
+                    'repo_stats': repo_stats,
+                    'user_data': user_data,
+                    'user_repos': user_repos
+                }
         else:
             return {
+                'success': False,
                 'error': 'No username specified in \'username\' query variable.'
             }
 
