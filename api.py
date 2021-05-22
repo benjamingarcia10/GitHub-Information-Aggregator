@@ -66,6 +66,7 @@ def get_user_repos(username: str, forked=True):
     return all_user_repos
 
 
+# Retrieve all repository stats from repos list
 def get_repo_stats(repos: list):
     total_count = 0                             # Total count of repositories
     total_stargazers = 0                        # Total stargazers for all repositories
@@ -76,6 +77,7 @@ def get_repo_stats(repos: list):
     all_repo_languages = {}
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
+        # Create a thread for each repository to retrieve languages information
         futures = [executor.submit(get_json_response, repo['languages_url']) for repo in repos]
         for future in concurrent.futures.as_completed(futures):
             try:
@@ -83,6 +85,7 @@ def get_repo_stats(repos: list):
                 if languages_info is None:
                     return None
                 else:
+                    # Store lines written in each language to calculate most -> least used
                     for language in languages_info:
                         if language in all_repo_languages:
                             all_repo_languages[language] += languages_info[language]
