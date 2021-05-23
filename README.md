@@ -26,8 +26,8 @@
 ## Usage
 There are two ways to retrieve the GitHub aggregated information:
 1. JSON API Endpoint
-    - Utilize the API endpoint by typing the server location with a "/api" at the end and appending the requested username in a username query variable
-    - (Optional) Append the "forked" query variable to indicate if you want to include forked repositories in the information or not (default is true)
+    - Utilize the API endpoint by typing the server location with an "/api" at the end and appending the requested username in a username query variable
+    - (Optional) Append the "forked" query variable with "true" or "false" to indicate if you want to include forked repositories in the information or not (default is true)
     - Examples:
     ```
    http://127.0.0.1:5000/api?username=user
