@@ -101,7 +101,7 @@
                         {% for language in repo_stats["repo_languages"] %}
                         <li>
                             <div class="subheading mb-3">{{ language }} ({{ "{:,}".format(repo_stats["repo_languages"][language]) }}
-                                lines)
+                                bytes)
                             </div>
                         </li>
                         {% endfor %}

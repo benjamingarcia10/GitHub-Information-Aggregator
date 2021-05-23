@@ -82,6 +82,7 @@ def get_user_repos(username: str, forked=True):
 
 
 # Retrieve all repository stats from repos list
+# https://docs.github.com/en/rest/reference/repos#list-repository-languages
 def get_repo_stats(repos: list):
     total_repo_count = 0  # Total count of repositories
     total_stargazers = 0  # Total stargazers for all repositories
