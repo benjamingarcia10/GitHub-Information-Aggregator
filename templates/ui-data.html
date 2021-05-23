@@ -100,7 +100,7 @@
                     <ol>
                         {% for language in repo_stats["repo_languages"] %}
                         <li>
-                            <div class="subheading mb-3">{{ language }} ({{ repo_stats["repo_languages"][language] }}
+                            <div class="subheading mb-3">{{ language }} ({{ "{:,}".format(repo_stats["repo_languages"][language]) }}
                                 lines)
                             </div>
                         </li>
@@ -121,7 +121,7 @@
             {% for repo in user_repos %}
             <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
                 <div class="flex-grow-1">
-                    <h3 class="mb-0">{{ repo["name"] }}{% if repo["fork"] %} (Forked){% endif %}</h3>
+                    <h3 class="mb-0">{{ repo["name"] }}{% if repo["fork"] %} (Forked){% endif %} - {{ repo["formatted_size"] }}</h3>
                     {% if repo["language"] %}
                     <div class="subheading mb-3">{{ repo["language"] }}</div>
                     {% endif %}

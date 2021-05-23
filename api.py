@@ -7,20 +7,36 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-GITHUB_APP_CLIENT_ID = os.getenv('GITHUB_APP_CLIENT_ID')
-GITHUB_APP_CLIENT_SECRET = os.getenv('GITHUB_APP_CLIENT_SECRET')
+GITHUB_ACCESS_TOKEN = os.getenv('GITHUB_ACCESS_TOKEN')
 
 PORT = int(os.environ.get('PORT', 5000))  # Retrieve port from environment variables or default to port 5000
 app = Flask(__name__)
 app.config['DEBUG'] = True
 api = Api(app)
 
+headers = {}
+if GITHUB_ACCESS_TOKEN:
+    headers = {
+        'Authorization': f'Token {GITHUB_ACCESS_TOKEN}'
+    }
+
+
+def format_from_kb(size):
+    # 2**10 = 1024
+    power = 2 ** 10
+    n = 0
+    power_labels = {0: 'KB', 1: 'MB', 2: 'GB', 3: 'TB'}
+    while size > power:
+        size /= power
+        n += 1
+    return size, power_labels[n]
+
 
 # Function to retrieve JSON response from url argument
 # Returns JSON response unless non 200 status code retrieved or exception (in which case returns None)
 def get_json_response(url: str, params=None):
     try:
-        response = requests.get(url, params=params)
+        response = requests.get(url, params=params, headers=headers)
 
         # 200 status code only
         if response.ok:
@@ -68,12 +84,10 @@ def get_user_repos(username: str, forked=True):
 
 # Retrieve all repository stats from repos list
 def get_repo_stats(repos: list):
-    total_count = 0  # Total count of repositories
+    total_repo_count = 0  # Total count of repositories
     total_stargazers = 0  # Total stargazers for all repositories
     total_fork_count = 0  # Total fork count for all repositories
-
-    total_repo_size = 0.0  # Total repositories size (retrieved in KB units)
-
+    total_repo_size = 0  # Total repositories size (retrieved in KB units)
     all_repo_languages = {}
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -95,21 +109,28 @@ def get_repo_stats(repos: list):
                 return None
 
     for repo in repos:
-        total_count += 1
+        total_repo_count += 1
         total_stargazers += repo['stargazers_count']
         total_fork_count += repo['forks_count']
         total_repo_size += repo['size']
+        formatted_size, size_unit = format_from_kb(repo['size'])
+        repo['formatted_size'] = f'{round(formatted_size, 2)} {size_unit}'
 
-    average_repo_size = total_repo_size / total_count  # Average repository size (in KB units)
+    if total_repo_size > 0:
+        average_repo_size, size_unit = format_from_kb(total_repo_size / total_repo_count)    # Average repository size (with proper units)
+    else:
+        average_repo_size = 0
+        size_unit = 'KB'
+
     all_repo_languages = {k: v for k, v in sorted(all_repo_languages.items(), key=lambda item: item[1], reverse=True)}
 
     return {
-        'total_repo_count': total_count,
+        'total_repo_count': total_repo_count,
         'total_stargazers': total_stargazers,
         'total_forks_count': total_fork_count,
         'total_size_repos': total_repo_size,
         'average_repo_size': average_repo_size,
-        'size_unit': 'KB',
+        'size_unit': size_unit,
         'repo_languages': all_repo_languages
     }
 
