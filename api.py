@@ -177,12 +177,16 @@ class GhApi(Resource):
                 forked = False
             else:
                 forked = True
-            return retrieve_gh_data(username, forked)
+            data = retrieve_gh_data(username, forked)
+            if data['success']:
+                return data, 200
+            else:
+                return data, 404
         else:
             return {
                 'success': False,
                 'error': 'No username specified in \'username\' query variable.'
-            }
+            }, 404
 
 
 @app.route('/favicon.ico')
@@ -208,11 +212,11 @@ def ui():
                                    username=username,
                                    repo_stats=gh_info['repo_stats'],
                                    user_data=gh_info['user_data'],
-                                   user_repos=gh_info['user_repos'])
+                                   user_repos=gh_info['user_repos']), 200
         else:
-            return gh_info
+            return gh_info, 404
     else:
-        return render_template('ui-index.html')
+        return render_template('ui-index.html'), 200
 
 
 api.add_resource(GhApi, '/api')
