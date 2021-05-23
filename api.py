@@ -128,7 +128,7 @@ def get_repo_stats(repos: list):
         'total_stargazers': total_stargazers,
         'total_forks_count': total_fork_count,
         'total_size_repos': total_repo_size,
-        'average_repo_size': round(average_repo_size),
+        'average_repo_size': round(average_repo_size, 2),
         'size_unit': size_unit,
         'repo_languages': all_repo_languages
     }
