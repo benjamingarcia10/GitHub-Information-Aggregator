@@ -189,7 +189,7 @@ def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico')
 
 
-@app.route('/ui')
+@app.route('/')
 def ui():
     query_parameters = request.args
     username = query_parameters.get('username')
@@ -214,7 +214,7 @@ def ui():
         return render_template('ui-index.html')
 
 
-api.add_resource(GhApi, '/')
+api.add_resource(GhApi, '/api')
 
 if __name__ == '__main__':
     app.run(debug=True, port=PORT)

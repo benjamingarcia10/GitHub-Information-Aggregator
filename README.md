@@ -26,16 +26,16 @@
 ## Usage
 There are two ways to retrieve the GitHub aggregated information:
 1. JSON API Endpoint
-    - Utilize the API endpoint by typing the server location and appending the requested username in a username query variable to the end of the url
+    - Utilize the API endpoint by typing the server location with a "/api" at the end and appending the requested username in a username query variable
     - (Optional) Append the "forked" query variable to indicate if you want to include forked repositories in the information or not (default is true)
     - Examples:
     ```
-   http://127.0.0.1:5000/?username=user
-   http://127.0.0.1:5000/?username=user&forked=false
+   http://127.0.0.1:5000/api?username=user
+   http://127.0.0.1:5000/api?username=user&forked=false
     ```
 2. Webpage
-    - Visit the server location and append the path /ui to the end.
-    - Example: ``http://127.0.0.1:5000/ui``
+    - Visit the server location.
+    - Example: ``http://127.0.0.1:5000``
     - Enter the username in the username text box and check/uncheck the checkbox indicating if you want to view forked repositories or not
 
 ## API Disclaimer
