@@ -8,8 +8,7 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 GITHUB_ACCESS_TOKEN = os.getenv('GITHUB_ACCESS_TOKEN')
-
-PORT = int(os.environ.get('PORT', 5000))  # Retrieve port from environment variables or default to port 5000
+PORT = os.getenv('PORT', 5000)  # Retrieve port from environment variables or default to port 5000
 app = Flask(__name__)
 app.config['DEBUG'] = True
 api = Api(app)
