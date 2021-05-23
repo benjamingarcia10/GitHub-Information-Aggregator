@@ -138,7 +138,7 @@ def get_repo_stats(repos: list):
 def retrieve_gh_data(username: str, forked: bool):
     with concurrent.futures.ThreadPoolExecutor() as executor:
         user_data_future = executor.submit(get_user_information, username)
-        user_repos_future = executor.submit(get_user_repos, username)
+        user_repos_future = executor.submit(get_user_repos, username, forked)
         user_data = user_data_future.result()
         user_repos = user_repos_future.result()
 
