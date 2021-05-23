@@ -25,3 +25,24 @@
 
 ## Usage
 There are two ways to retrieve the GitHub aggregated information:
+1. JSON API Endpoint
+    - Utilize the API endpoint by typing the server location and appending the requested username in a username query variable to the end of the url
+    - (Optional) Append the "forked" query variable to indicate if you want to include forked repositories in the information or not (default is true)
+    - Examples:
+    ```
+   http://127.0.0.1:5000/?username=user
+   http://127.0.0.1:5000/?username=user&forked=false
+    ```
+2. Webpage
+    - Visit the server location and append the path /ui to the end.
+    - Example: ``http://127.0.0.1:5000/ui``
+    - Enter the username in the username text box and check/uncheck the checkbox indicating if you want to view forked repositories or not
+
+## API Disclaimer
+[View the GitHub rate limit documentation here](https://docs.github.com/en/rest/overview/resources-in-the-rest-api#rate-limiting)
+
+Unauthenticated requests are limited to 60 requests per hour. Depending on how many repositories the username 
+you are retrieving data for has, you may exceed the 60 requests per hour very quickly. If you exceed the limit, 
+GitHub will rate limit the origin IP (IP of the server requesting information) and both paths will return indicating 
+a GitHub API error. To bypass this, follow the steps indicated in #4 of the setup section above. This will increase 
+your rate limit to 5,000 requests per hour.
