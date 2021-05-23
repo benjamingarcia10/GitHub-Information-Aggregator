@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+    <meta name="description" content="Rendered template for {{ username }} GitHub information"/>
+    <meta name="author" content="Benjamin Garcia"/>
+    <title>{{ username }} GitHub Information</title>
+    <!-- Font Awesome icons (free version)-->
+    <script src="https://use.fontawesome.com/releases/v5.15.3/js/all.js" crossorigin="anonymous"></script>
+    <!-- Google fonts-->
+    <link href="https://fonts.googleapis.com/css?family=Saira+Extra+Condensed:500,700" rel="stylesheet"
+          type="text/css"/>
+    <link href="https://fonts.googleapis.com/css?family=Muli:400,400i,800,800i" rel="stylesheet" type="text/css"/>
+    <!-- Core theme CSS (includes Bootstrap)-->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/styles.css') }}">
+</head>
+
+<body id="page-top">
+<!-- Navigation-->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top" id="sideNav">
+    <a class="navbar-brand js-scroll-trigger" href="#page-top">
+        <span class="d-block d-lg-none">
+            {% if user_data["name"] %}{{ user_data["name"] }}
+            {% else %}{{ username }}{% endif %}
+        </span>
+        <span class="d-none d-lg-block"><img class="img-fluid img-profile rounded-circle mx-auto mb-2"
+                                             src="{{ user_data['avatar_url'] }}"
+                                             alt="{{ username }} GitHub Avatar"/></span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarResponsive"
+            aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation"><span
+            class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse" id="navbarResponsive">
+        <ul class="navbar-nav">
+            <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#about">About</a></li>
+            <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#repo-stats">Repository Stats</a></li>
+            <li class="nav-item"><a class="nav-link js-scroll-trigger" href="#repositories">Repositories</a></li>
+        </ul>
+    </div>
+</nav>
+
+<!-- Page Content-->
+<div class="container-fluid p-0">
+    <!-- About-->
+    <section class="information-section" id="about">
+        <div class="information-section-content">
+            <h1 class="mb-0">
+                {% if user_data["name"] %}
+                <span class="text-primary">{{ user_data["name"] }}</span>
+                {% else %}
+                <span class="text-primary">{{ username }}</span>
+                {% endif %}
+            </h1>
+            <div class="subheading mb-5">
+                {% if user_data["name"] %}{{ username }} · {% endif %}
+                <b>{{ user_data["followers"] }}</b> followers · <b>{{ user_data["following"] }}</b> following
+                {% if user_data["company"] %} · {{ user_data["company"] }}{% endif %}
+            </div>
+            {% if user_data["bio"] %}
+            <p class="lead mb-5">{{ user_data["bio"] }}</p>
+            {% endif %}
+            <div class="social-icons">
+                {% if user_data["blog"] %}
+                <a class="social-icon" href="{{ user_data['blog'] }}" target="_blank">
+                    <i class="fas fa-link"></i>
+                </a>
+                {% endif %}
+                <a class="social-icon" href="{{ user_data['html_url'] }}" target="_blank">
+                    <i class="fab fa-github"></i>
+                </a>
+                {% if user_data["twitter_username"] %}
+                <a class="social-icon" href="https://twitter.com/{{ user_data['twitter_username'] }}" target="_blank">
+                    <i class="fab fa-twitter"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <hr class="m-0"/>
+
+    <!-- Repository Stats -->
+    <section class="information-section" id="repo-stats">
+        <div class="information-section-content">
+            <h2 class="mb-5">Repository Stats</h2>
+            <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                <div class="flex-grow-1">
+                    <h3 class="mb-0">Total Repositories: {{ repo_stats["total_repo_count"] }}</h3>
+                    <h3 class="mb-0">Total Stargazers: {{ repo_stats["total_stargazers"] }}</h3>
+                    <h3 class="mb-0">Total Forks Count: {{ repo_stats["total_forks_count"] }}</h3>
+                    <h3 class="mb-0">Average Repository Size: {{ repo_stats["average_repo_size"]|round(2) }} {{
+                        repo_stats["size_unit"] }}</h3>
+                </div>
+            </div>
+
+            <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                <div class="flex-grow-1">
+                    <h3 class="mb-0">Languages</h3>
+                    <ol>
+                        {% for language in repo_stats["repo_languages"] %}
+                        <li>
+                            <div class="subheading mb-3">{{ language }} ({{ repo_stats["repo_languages"][language] }}
+                                lines)
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <hr class="m-0"/>
+
+    <!-- Repositories-->
+    <section class="information-section" id="repositories">
+        <div class="information-section-content">
+            <h2 class="mb-5">Repositories</h2>
+
+            {% for repo in user_repos %}
+            <div class="d-flex flex-column flex-md-row justify-content-between mb-5">
+                <div class="flex-grow-1">
+                    <h3 class="mb-0">{{ repo["name"] }}{% if repo["fork"] %} (Forked){% endif %}</h3>
+                    {% if repo["language"] %}
+                    <div class="subheading mb-3">{{ repo["language"] }}</div>
+                    {% endif %}
+                    {% if repo["description"] %}
+                    <div>{{ repo["description"] }}</div>
+                    <br/>
+                    {% endif %}
+                    <div>Stargazers: {{ repo["stargazers_count"] }}</div>
+                    <div>Watchers: {{ repo["watchers_count"] }}</div>
+                    <div>Forks: {{ repo["forks_count"] }}</div>
+                    {% if repo["license"] %}
+                    <h5>License: {{ repo["license"]["name"] }}</h5>
+                    {% endif %}
+                </div>
+                <div class="flex-shrink-0">
+                    <span class="text-primary">
+                        <a href="{{ repo['html_url'] }}" target="_blank">View on GitHub</a>
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+
+<!-- Bootstrap core JS-->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Core theme JS-->
+<script src="{{ url_for('static',filename='js/scripts.js') }}"></script>
+<!-- JavaScript Bundle with Popper -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-gtEjrD/SeCtmISkJkNUaaKMoLD0//ElJ19smozuHV6z3Iehds+3Ulb9Bn9Plx0x4"
+        crossorigin="anonymous"></script>
+</body>
+</html>

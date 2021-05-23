@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, send_from_directory, render_template
 from flask_restful import Resource, Api
 import concurrent.futures
 import os
@@ -10,7 +10,7 @@ load_dotenv(override=True)
 GITHUB_APP_CLIENT_ID = os.getenv('GITHUB_APP_CLIENT_ID')
 GITHUB_APP_CLIENT_SECRET = os.getenv('GITHUB_APP_CLIENT_SECRET')
 
-PORT = int(os.environ.get('PORT', 5000))            # Retrieve port from environment variables or default to port 5000
+PORT = int(os.environ.get('PORT', 5000))  # Retrieve port from environment variables or default to port 5000
 app = Flask(__name__)
 app.config['DEBUG'] = True
 api = Api(app)
@@ -68,11 +68,11 @@ def get_user_repos(username: str, forked=True):
 
 # Retrieve all repository stats from repos list
 def get_repo_stats(repos: list):
-    total_count = 0                             # Total count of repositories
-    total_stargazers = 0                        # Total stargazers for all repositories
-    total_fork_count = 0                        # Total fork count for all repositories
+    total_count = 0  # Total count of repositories
+    total_stargazers = 0  # Total stargazers for all repositories
+    total_fork_count = 0  # Total fork count for all repositories
 
-    total_repo_size = 0.0                       # Total repositories size (retrieved in KB units)
+    total_repo_size = 0.0  # Total repositories size (retrieved in KB units)
 
     all_repo_languages = {}
 
@@ -100,7 +100,7 @@ def get_repo_stats(repos: list):
         total_fork_count += repo['forks_count']
         total_repo_size += repo['size']
 
-    average_repo_size = total_repo_size / total_count       # Average repository size (in KB units)
+    average_repo_size = total_repo_size / total_count  # Average repository size (in KB units)
     all_repo_languages = {k: v for k, v in sorted(all_repo_languages.items(), key=lambda item: item[1], reverse=True)}
 
     return {
@@ -109,8 +109,39 @@ def get_repo_stats(repos: list):
         'total_forks_count': total_fork_count,
         'total_size_repos': total_repo_size,
         'average_repo_size': average_repo_size,
+        'size_unit': 'KB',
         'repo_languages': all_repo_languages
     }
+
+
+def retrieve_gh_data(username: str, forked: bool):
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        user_data_future = executor.submit(get_user_information, username)
+        user_repos_future = executor.submit(get_user_repos, username)
+        user_data = user_data_future.result()
+        user_repos = user_repos_future.result()
+
+    if user_data is None or user_repos is None:
+        return {
+            'success': False,
+            'error': 'GitHub API error.'
+        }
+    else:
+        repo_stats = get_repo_stats(user_repos)
+        if repo_stats is None:
+            return {
+                'success': False,
+                'error': 'GitHub API error.'
+            }
+        else:
+            return {
+                'success': True,
+                'username': username,
+                'viewing_forked_repos': forked,
+                'repo_stats': repo_stats,
+                'user_data': user_data,
+                'user_repos': user_repos
+            }
 
 
 class GhApi(Resource):
@@ -119,40 +150,48 @@ class GhApi(Resource):
         username = query_parameters.get('username')
         forked = query_parameters.get('forked')
 
-        if forked and forked.strip().lower() == 'false':
-            forked = False
-        else:
-            forked = True
-
         if username:
             username = username.strip()
-
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                user_data_future = executor.submit(get_user_information, username)
-                user_repos_future = executor.submit(get_user_repos, username)
-                user_data = user_data_future.result()
-                user_repos = user_repos_future.result()
-
-            if user_data is None or user_repos is None:
-                return {
-                    'success': False,
-                    'error': 'GitHub API error.'
-                }
+            if forked and forked.strip().lower() == 'false':
+                forked = False
             else:
-                repo_stats = get_repo_stats(user_repos)
-                return {
-                    'success': True,
-                    'username': username,
-                    'viewing_forked_repos': forked,
-                    'repo_stats': repo_stats,
-                    'user_data': user_data,
-                    'user_repos': user_repos
-                }
+                forked = True
+            return retrieve_gh_data(username, forked)
         else:
             return {
                 'success': False,
                 'error': 'No username specified in \'username\' query variable.'
             }
+
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico')
+
+
+@app.route('/ui')
+def ui():
+    query_parameters = request.args
+    username = query_parameters.get('username')
+    forked = query_parameters.get('forked')
+
+    if username:
+        username = username.strip()
+        if forked and forked.strip().lower() == 'true':
+            forked = True
+        else:
+            forked = False
+        gh_info = retrieve_gh_data(username, forked)
+        if gh_info['success']:
+            return render_template('ui-data.html',
+                                   username=username,
+                                   repo_stats=gh_info['repo_stats'],
+                                   user_data=gh_info['user_data'],
+                                   user_repos=gh_info['user_repos'])
+        else:
+            return gh_info
+    else:
+        return render_template('ui-index.html')
 
 
 api.add_resource(GhApi, '/')

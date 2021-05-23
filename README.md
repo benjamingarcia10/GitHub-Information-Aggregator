@@ -1,2 +1,2 @@
-# GoLinks-Backend-Assignment
+# GitHub-Information-Aggregator
  
